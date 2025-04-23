@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>{{ challenge.title }}</h2>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4>Challenge Description</h4>
+                <p>{{ challenge.description }}</p>
+            </div>
+        </div>
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label for="code-editor" class="form-label">Your Code:</label>
+                <div id="code-editor" class="code-editor"></div>
+                <textarea name="code" id="code-hidden" style="display: none;">{{ code }}</textarea>
+            </div>
+            
+            <div class="mb-3 d-flex justify-content-between">
+                <button type="submit" name="action" value="save" class="btn btn-secondary">Save Progress</button>
+                <button type="submit" name="action" value="validate" class="btn btn-primary">Validate Solution</button>
+            </div>
+        </form>
+        
+        {% if submission and submission.result %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4>Test Results</h4>
+                </div>
+                <div class="card-body">
+                    <div class="result-panel">{{ submission.result }}</div>
+                    
+                    {% if submission.is_passing %}
+                        <div class="alert alert-success mt-3">
+                            <strong>Congratulations!</strong> Your solution passed all tests.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mt-3">
+                            <strong>Not quite there yet.</strong> Your solution didn't pass all tests. Please review the errors and try again.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize Ace editor
+    const editor = ace.edit("code-editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+    editor.setValue(document.getElementById('code-hidden').value);
+    
+    // Update hidden textarea on form submit
+    document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('code-hidden').value = editor.getValue();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Tutor Dashboard - {{ tutor.name }}</h2>
+
+<div class="row mb-4">
+    <div class="col">
+        <a href="{{ url_for('create_challenge') }}" class="btn btn-primary">Create New Challenge</a>
+        <a href="{{ url_for('tutor_lessons') }}" class="btn btn-primary">Manage Lessons</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Your Challenges</h3>
+            </div>
+            <div class="card-body">
+                {% if challenges %}
+                    <div class="list-group">
+                        {% for challenge in challenges %}
+                            <a href="{{ url_for('challenge_detail', challenge_id=challenge.id) }}" class="list-group-item list-group-item-action">
+                                {{ challenge.title }}
+                                <small class="text-muted d-block">Created: {{ challenge.created_at.strftime('%Y-%m-%d') }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>You haven't created any challenges yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Student Activities</h3>
+            </div>
+            <div class="card-body">
+                {% if submissions %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Challenge</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in submissions %}
+                                <tr>
+                                    <td>{{ submission.student_email }}</td>
+                                    <td>{{ submission.challenge_title }}</td>
+                                    <td>{{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if submission.is_passing %}
+                                            <span class="badge bg-success">Passed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No student activities yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

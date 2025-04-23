@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Available Lessons</h2>
+
+<div class="row mb-4">
+    <div class="col">
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Lessons</h3>
+    </div>
+    <div class="card-body">
+        {% if lessons_data %}
+            <div class="list-group">
+                {% for lesson_data in lessons_data %}
+                    <a href="{{ url_for('student_lesson_detail', lesson_id=lesson_data.lesson.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ lesson_data.lesson.title }}</h5>
+                            <span class="badge bg-primary">{{ lesson_data.completed_challenges }}/{{ lesson_data.total_challenges }} Completed</span>
+                        </div>
+                        <p class="mb-1">{{ lesson_data.lesson.description }}</p>
+                        <div class="progress mt-2" style="height: 10px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ lesson_data.completion }}%;" 
+                                aria-valuenow="{{ lesson_data.completion }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ lesson_data.completion|int }}%
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No lessons available yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

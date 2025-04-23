@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Edit Lesson</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="title" class="form-label">Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ lesson.title }}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="4" required>{{ lesson.description }}</textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Select Challenges</label>
+                <div class="card">
+                    <div class="card-body">
+                        {% if all_challenges %}
+                            {% for challenge in all_challenges %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="challenges" value="{{ challenge.id }}" id="challenge-{{ challenge.id }}"
+                                        {% if challenge.id in selected_challenge_ids %}checked{% endif %}>
+                                    <label class="form-check-label" for="challenge-{{ challenge.id }}">
+                                        {{ challenge.title }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>You don't have any challenges yet. <a href="{{ url_for('create_challenge') }}">Create a challenge</a> first.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Update Lesson</button>
+            <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

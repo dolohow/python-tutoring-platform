@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Challenge: {{ challenge.title }}</h2>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Challenge Details</h3>
+            </div>
+            <div class="card-body">
+                <h4>Description</h4>
+                <p>{{ challenge.description }}</p>
+                
+                <h4>Initial Code</h4>
+                <pre><code>{{ challenge.initial_code }}</code></pre>
+                
+                <h4>Test Code</h4>
+                <pre><code>{{ challenge.test_code }}</code></pre>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Student Progress</h3>
+            </div>
+            <div class="card-body">
+                {% if student_progress %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Submissions</th>
+                                <th>Last Submission</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in student_progress %}
+                                <tr>
+                                    <td>{{ student.email }}</td>
+                                    <td>{{ student.submissions }}</td>
+                                    <td>{{ student.latest_submission.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if student.has_passed %}
+                                            <span class="badge bg-success">Passed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">In Progress</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_submission', submission_id=student.latest_submission.id) }}" class="btn btn-sm btn-primary">View Latest</a>
+                                        <button class="btn btn-sm btn-outline-secondary show-all-submissions" data-student-id="{{ student.latest_submission.student_id }}">All Submissions</button>
+                                    </td>
+                                </tr>
+                                <tr class="submissions-row" id="submissions-{{ student.latest_submission.student_id }}" style="display: none;">
+                                    <td colspan="5">
+                                        <div class="list-group">
+                                            {% for sub in Submission.query.filter_by(student_id=student.latest_submission.student_id, challenge_id=challenge.id).order_by(Submission.created_at.desc()).all() %}
+                                                <a href="{{ url_for('view_submission', submission_id=sub.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    Submission on {{ sub.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                                    <span class="badge {% if sub.is_passing %}bg-success{% else %}bg-warning{% endif %}">
+                                                        {% if sub.is_passing %}Passed{% else %}Failed{% endif %}
+                                                    </span>
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No students have attempted this challenge yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle showing all submissions for a student
+    document.querySelectorAll('.show-all-submissions').forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = this.getAttribute('data-student-id');
+            const submissionsRow = document.getElementById(`submissions-${studentId}`);
+            
+            if (submissionsRow.style.display === 'none') {
+                submissionsRow.style.display = 'table-row';
+                this.textContent = 'Hide Submissions';
+            } else {
+                submissionsRow.style.display = 'none';
+                this.textContent = 'All Submissions';
+            }
+        });
+    });
+</script>
+{% endblock %}

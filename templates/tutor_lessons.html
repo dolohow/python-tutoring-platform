@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Tutor Lessons - {{ tutor.name }}</h2>
+
+<div class="row mb-4">
+    <div class="col">
+        <a href="{{ url_for('create_lesson') }}" class="btn btn-primary">Create New Lesson</a>
+        <a href="{{ url_for('tutor_dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Your Lessons</h3>
+    </div>
+    <div class="card-body">
+        {% if lessons %}
+            <div class="list-group">
+                {% for lesson in lessons %}
+                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ lesson.title }}</h5>
+                            <span class="badge bg-primary">{{ lesson.challenges|length }} Challenges</span>
+                        </div>
+                        <p class="mb-1">{{ lesson.description }}</p>
+                        <small class="text-muted">Created: {{ lesson.created_at.strftime('%Y-%m-%d') }}</small>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>You haven't created any lessons yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

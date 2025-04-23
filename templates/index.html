@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h2>Welcome to Python Tutoring Platform</h2>
+    <p class="lead">A simple platform for Python programming challenges.</p>
+    
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3>For Students</h3>
+                    <p>Join with your name and start solving Python programming challenges.</p>
+                    <a href="{{ url_for('student_join') }}" class="btn btn-primary">Join as Student</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3>For Tutors</h3>
+                    <p>Create challenges and monitor student progress.</p>
+                    <a href="{{ url_for('tutor_login') }}" class="btn btn-secondary">Login as Tutor</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
