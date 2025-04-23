@@ -4,7 +4,7 @@
 <div class="text-center py-5">
     <h2>Welcome to Python Tutoring Platform</h2>
     <p class="lead">A simple platform for Python programming challenges.</p>
-    
+    {% if not session.get('student_id') and not session.get('tutor_id') %}
     <div class="row mt-5">
         <div class="col-md-6">
             <div class="card">
@@ -25,5 +25,6 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
