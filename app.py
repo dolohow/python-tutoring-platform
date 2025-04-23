@@ -11,11 +11,11 @@ import os
 import sys
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "a")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///app.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN")
+EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "gmail.com")
 
 db = SQLAlchemy(app)
 
