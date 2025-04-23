@@ -46,6 +46,6 @@
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/python");
     editor.setReadOnly(true);
-    editor.setValue(`{{ submission.code|replace("\n", "\\n")|replace("'", "\\'") }}`);
+    editor.setValue(`{{ submission.code | safe }}`);
 </script>
 {% endblock %}
