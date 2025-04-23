@@ -51,7 +51,7 @@ class Student(db.Model):
     session_id = db.Column(db.String(100), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     submissions = db.relationship("Submission", backref="student", lazy=True)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
 
 
 class Submission(db.Model):
