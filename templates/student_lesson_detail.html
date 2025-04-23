@@ -39,7 +39,7 @@
                                         <span class="badge bg-warning">Pending</span>
                                     {% endif %}
                                 </div>
-                                <p class="mb-1">{{ challenge_data.challenge.description|truncate(100) }}</p>
+                                <p class="mb-1">{{ challenge_data.challenge.description|truncate(100) | markdown | safe }}</p>
                                 
                                 {% if challenge_data.last_submission %}
                                     <p class="text-muted small">Last attempt: {{ challenge_data.last_submission.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
