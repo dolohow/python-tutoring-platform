@@ -7,7 +7,7 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h4>Challenge Description</h4>
-                <p>{{ challenge.description }}</p>
+                <p>{{ challenge.description | markdown | safe }}</p>
             </div>
         </div>
         

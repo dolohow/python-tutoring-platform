@@ -1,45 +1,40 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <h2>Create New Challenge</h2>
+        <h2>Edit Challenge</h2>
         <form method="POST">
             <div class="mb-3">
                 <label for="title" class="form-label">Title</label>
-                <input type="text" class="form-control" id="title" name="title" required>
+                <input type="text" class="form-control" id="title" name="title" value="{{ challenge.title }}" required>
             </div>
             
             <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
-                <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                <textarea class="form-control" id="description" name="description" rows="4" required>{{ challenge.description }}</textarea>
                 <div class="form-text">Markdown formatting is supported.</div>
             </div>
             
             <div class="mb-3">
                 <label for="initial-code-editor" class="form-label">Initial Code</label>
                 <div id="initial-code-editor" class="code-editor"></div>
-                <textarea name="initial_code" id="initial-code-hidden" style="display: none;">def solution():
-    # Write your solution here
-    pass</textarea>
+                <textarea name="initial_code" id="initial-code-hidden" style="display: none;">{{ challenge.initial_code }}</textarea>
                 <div class="form-text">Initial code that will be shown to students.</div>
             </div>
             
             <div class="mb-3">
                 <label for="test-code-editor" class="form-label">Test Code</label>
                 <div id="test-code-editor" class="code-editor"></div>
-                <textarea name="test_code" id="test-code-hidden" style="display: none;">def test_solution(self):
-    self.assertEqual(solution(), expected_result)
-    # Add more assertions as needed</textarea>
+                <textarea name="test_code" id="test-code-hidden" style="display: none;">{{ challenge.test_code }}</textarea>
                 <div class="form-text">Test code that will validate student solutions. These tests should be written as unittest methods.</div>
             </div>
             
-            <button type="submit" class="btn btn-primary">Create Challenge</button>
+            <button type="submit" class="btn btn-primary">Update Challenge</button>
+            <a href="{{ url_for('challenge_detail', challenge_id=challenge.id) }}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
     // Initialize Ace editors
@@ -52,7 +47,6 @@
     testEditor.setTheme("ace/theme/monokai");
     testEditor.session.setMode("ace/mode/python");
     testEditor.setValue(document.getElementById('test-code-hidden').value);
-
     
     // Update hidden textareas on form submit
     document.querySelector('form').addEventListener('submit', function() {
@@ -61,4 +55,3 @@
     });
 </script>
 {% endblock %}
-

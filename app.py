@@ -1,3 +1,4 @@
+import markdown
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import textwrap
 from werkzeug.security import generate_password_hash
@@ -17,6 +18,11 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN")
 
 db = SQLAlchemy(app)
+
+
+@app.template_filter("markdown")
+def markdown_filter(text):
+    return markdown.markdown(text)
 
 
 # Models
@@ -275,6 +281,32 @@ def create_challenge():
         return redirect(url_for("tutor_dashboard"))
 
     return render_template("create_challenge.html")
+
+
+@app.route("/tutor/edit_challenge/<int:challenge_id>", methods=["GET", "POST"])
+def edit_challenge(challenge_id):
+    if "tutor_id" not in session:
+        return redirect(url_for("tutor_login"))
+
+    challenge = Challenge.query.get_or_404(challenge_id)
+
+    # Ensure this challenge belongs to the current tutor
+    if challenge.tutor_id != session["tutor_id"]:
+        flash("You do not have permission to edit this challenge", "error")
+        return redirect(url_for("tutor_dashboard"))
+
+    if request.method == "POST":
+        challenge.title = request.form.get("title")
+        challenge.description = request.form.get("description")
+        challenge.initial_code = request.form.get("initial_code")
+        challenge.test_code = request.form.get("test_code")
+
+        db.session.commit()
+
+        flash("Challenge updated successfully!", "success")
+        return redirect(url_for("challenge_detail", challenge_id=challenge.id))
+
+    return render_template("edit_challenge.html", challenge=challenge)
 
 
 @app.route("/tutor/submission/<int:submission_id>")
