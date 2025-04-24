@@ -38,7 +38,7 @@
                                         <span class="badge bg-success">{{ challenge_data.students_completed }} Completed</span>
                                     </div>
                                 </div>
-                                <p class="mb-1">{{ challenge_data.challenge.description|truncate(100) }}</p>
+                                <p class="mb-1">{{ challenge_data.challenge.description|truncate(100) | markdown | safe }}</p>
                                 <a href="{{ url_for('challenge_detail', challenge_id=challenge_data.challenge.id) }}" class="btn btn-sm btn-outline-secondary mt-2">View Challenge</a>
                             </div>
                         {% endfor %}
