@@ -45,7 +45,7 @@
                         <tbody>
                             {% for student in student_progress %}
                                 <tr>
-                                    <td>{{ student.email }}</td>
+                                    <td>{{ student.last_name }}</td>
                                     <td>{{ student.submissions }}</td>
                                     <td>{{ student.latest_submission.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                                     <td>

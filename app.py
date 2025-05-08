@@ -81,6 +81,8 @@ class Challenge(db.Model):
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
+    first_name = db.Column(db.String(20), nullable=False)
+    last_name = db.Column(db.String(20), nullable=False)
     session_id = db.Column(db.String(100), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     last_login = db.Column(db.DateTime, nullable=True)
