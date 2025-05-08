@@ -52,6 +52,7 @@ class Student(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     session_id = db.Column(db.String(100), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    last_login = db.Column(db.DateTime, nullable=True)
     submissions = db.relationship("Submission", backref="student", lazy=True)
     password_hash = db.Column(db.String(256), nullable=False)
 
@@ -113,6 +114,9 @@ def student_join():
         existing_student = Student.query.filter_by(email=email).first()
         if existing_student:
             if check_password_hash(existing_student.password_hash, password):
+                existing_student.last_login = datetime.datetime.now(datetime.UTC)
+                db.session.commit()
+
                 session["student_id"] = existing_student.id
                 session["student_email"] = existing_student.email
                 flash("Welcome back, " + existing_student.email + "!", "success")
@@ -124,7 +128,10 @@ def student_join():
         session_id = str(uuid.uuid4())
         password_hash = generate_password_hash(password)
         new_student = Student(
-            email=email, session_id=session_id, password_hash=password_hash
+            email=email,
+            session_id=session_id,
+            password_hash=password_hash,
+            last_login=datetime.datetime.now(datetime.UTC),
         )
 
         db.session.add(new_student)
