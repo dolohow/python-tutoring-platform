@@ -1,14 +1,16 @@
 import datetime
-import markdown
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-import textwrap
-from werkzeug.security import generate_password_hash
-from flask_sqlalchemy import SQLAlchemy
-import uuid
-import subprocess
-import tempfile
 import os
+import subprocess
 import sys
+import tempfile
+import textwrap
+import uuid
+
+import markdown
+
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "a")
@@ -92,9 +94,6 @@ def index():
 
 
 # Student Routes
-from werkzeug.security import generate_password_hash, check_password_hash
-
-
 @app.route("/student/join", methods=["GET", "POST"])
 def student_join():
     if request.method == "POST":
