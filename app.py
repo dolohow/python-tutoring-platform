@@ -1,9 +1,9 @@
+import datetime
 import markdown
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import textwrap
 from werkzeug.security import generate_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 import uuid
 import subprocess
 import tempfile
@@ -40,7 +40,7 @@ class Challenge(db.Model):
     description = db.Column(db.Text, nullable=False)
     initial_code = db.Column(db.Text, nullable=False)
     test_code = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
     submissions = db.relationship("Submission", backref="challenge", lazy=True)
 
@@ -49,7 +49,7 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     session_id = db.Column(db.String(100), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     submissions = db.relationship("Submission", backref="student", lazy=True)
     password_hash = db.Column(db.String(256), nullable=False)
 
@@ -59,7 +59,7 @@ class Submission(db.Model):
     code = db.Column(db.Text, nullable=False)
     result = db.Column(db.Text, nullable=True)
     is_passing = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     challenge_id = db.Column(db.Integer, db.ForeignKey("challenge.id"), nullable=False)
 
@@ -68,7 +68,7 @@ class Lesson(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
     challenges = db.relationship(
         "Challenge", secondary="lesson_challenges", backref="lessons"
