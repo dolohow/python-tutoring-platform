@@ -255,22 +255,7 @@ def tutor_dashboard():
     tutor = Tutor.query.get(session["tutor_id"])
     challenges = Challenge.query.filter_by(tutor_id=tutor.id).all()
 
-    # Get all submissions for the tutor's challenges
-    submissions = []
-    for challenge in challenges:
-        challenge_submissions = Submission.query.filter_by(
-            challenge_id=challenge.id
-        ).all()
-        for submission in challenge_submissions:
-            student = Student.query.get(submission.student_id)
-            submissions.append(
-                {
-                    "challenge_title": challenge.title,
-                    "student_email": student.email,
-                    "created_at": submission.created_at,
-                    "is_passing": submission.is_passing,
-                }
-            )
+    submissions = Submission.query.order_by(Submission.created_at.desc()).limit(25)
 
     return render_template(
         "tutor_dashboard.html",

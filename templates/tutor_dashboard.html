@@ -52,8 +52,8 @@
                         <tbody>
                             {% for submission in submissions %}
                                 <tr>
-                                    <td>{{ submission.student_email }}</td>
-                                    <td>{{ submission.challenge_title }}</td>
+                                    <td>{{ submission.student.last_name }}</td>
+                                    <td>{{ submission.challenge.title }}</td>
                                     <td>{{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                                     <td>
                                         {% if submission.is_passing %}
