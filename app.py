@@ -27,6 +27,37 @@ def markdown_filter(text):
     return markdown.markdown(text)
 
 
+@app.before_request
+def check_student_session():
+    # Skip verification for non-student routes and static files
+    if (
+        request.endpoint
+        and not request.endpoint.startswith("student_")
+        and not request.endpoint == "static"
+    ):
+        return
+
+    # Only verify student sessions for student routes
+    if request.endpoint and request.endpoint.startswith("student_"):
+        # Skip verification for student_join route to allow login
+        if request.endpoint == "student_join":
+            return
+
+        # Verify the session is valid
+        if "student_id" in session and "session_id" in session:
+            student = db.session.get(Student, session["student_id"])
+            if not student or student.session_id != session["session_id"]:
+                # Invalid or expired session, log them out
+                session.pop("student_id", None)
+                session.pop("student_email", None)
+                session.pop("session_id", None)
+                flash("Your session has expired. Please login again.", "error")
+                return redirect(url_for("student_join"))
+        else:
+            # No session found, redirect to login
+            return redirect(url_for("student_join"))
+
+
 # Models
 class Tutor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -114,11 +145,14 @@ def student_join():
         existing_student = Student.query.filter_by(email=email).first()
         if existing_student:
             if check_password_hash(existing_student.password_hash, password):
+                new_session_id = str(uuid.uuid4())
+                existing_student.session_id = new_session_id
                 existing_student.last_login = datetime.datetime.now(datetime.UTC)
                 db.session.commit()
 
                 session["student_id"] = existing_student.id
                 session["student_email"] = existing_student.email
+                session["session_id"] = new_session_id
                 flash("Welcome back, " + existing_student.email + "!", "success")
                 return redirect(url_for("student_dashboard"))
             else:
@@ -139,6 +173,7 @@ def student_join():
 
         session["student_id"] = new_student.id
         session["student_email"] = new_student.email
+        session["session_id"] = session_id
         flash("Account created successfully!", "success")
         return redirect(url_for("student_dashboard"))
 
@@ -378,7 +413,13 @@ def challenge_detail(challenge_id):
 
 @app.route("/logout")
 def logout():
-    # Clear the session
+    if "student_id" in session:
+        # Update the session ID in the database when the user logs out
+        student = db.session.get(Student, session["student_id"])
+        if student:
+            student.session_id = str(uuid.uuid4())
+            db.session.commit()
+
     session.clear()
     flash("You have been logged out successfully", "success")
     return redirect(url_for("index"))
