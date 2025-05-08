@@ -222,21 +222,18 @@ def student_challenge(challenge_id):
 
     if request.method == "POST":
         code = request.form.get("code")
-        action = request.form.get("action")
 
         new_submission = Submission(
             code=code, student_id=session["student_id"], challenge_id=challenge_id
         )
 
-        if action == "validate":
-            result, is_passing = run_code_with_tests(code, challenge.test_code)
-            new_submission.result = result
-            new_submission.is_passing = is_passing
+        result, is_passing = run_code_with_tests(code, challenge.test_code)
+        new_submission.result = result
+        new_submission.is_passing = is_passing
 
         db.session.add(new_submission)
         db.session.commit()
 
-        # Redirect to avoid form resubmission
         return redirect(url_for("student_challenge", challenge_id=challenge_id))
 
     return render_template(
