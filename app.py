@@ -10,6 +10,7 @@ import markdown
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import func
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -73,7 +74,7 @@ class Challenge(db.Model):
     description = db.Column(db.Text, nullable=False)
     initial_code = db.Column(db.Text, nullable=False)
     test_code = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=func.now())
     tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
     submissions = db.relationship("Submission", backref="challenge", lazy=True)
 
@@ -84,7 +85,7 @@ class Student(db.Model):
     first_name = db.Column(db.String(20), nullable=False)
     last_name = db.Column(db.String(20), nullable=False)
     session_id = db.Column(db.String(100), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=func.now())
     last_login = db.Column(db.DateTime, nullable=True)
     submissions = db.relationship("Submission", backref="student", lazy=True)
     password_hash = db.Column(db.String(256), nullable=False)
@@ -95,7 +96,7 @@ class Submission(db.Model):
     code = db.Column(db.Text, nullable=False)
     result = db.Column(db.Text, nullable=True)
     is_passing = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=func.now())
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     challenge_id = db.Column(db.Integer, db.ForeignKey("challenge.id"), nullable=False)
 
@@ -104,7 +105,7 @@ class Lesson(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    created_at = db.Column(db.DateTime, default=func.now())
     tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
     challenges = db.relationship(
         "Challenge", secondary="lesson_challenges", backref="lessons"
@@ -149,7 +150,7 @@ def student_join():
             if check_password_hash(existing_student.password_hash, password):
                 new_session_id = str(uuid.uuid4())
                 existing_student.session_id = new_session_id
-                existing_student.last_login = datetime.datetime.now(datetime.UTC)
+                existing_student.last_login = func.now()
                 db.session.commit()
 
                 session["student_id"] = existing_student.id
@@ -167,7 +168,7 @@ def student_join():
             email=email,
             session_id=session_id,
             password_hash=password_hash,
-            last_login=datetime.datetime.now(datetime.UTC),
+            last_login=func.now(),
         )
 
         db.session.add(new_student)
