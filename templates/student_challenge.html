@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <div class="row">
     <div class="col-md-12">
@@ -7,22 +6,33 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h4>Challenge Description</h4>
-                <p>{{ challenge.description | markdown | safe }}</p>
+                <!-- Prevent copying of challenge description -->
+                <div class="challenge-description"
+                     oncontextmenu="return false;"
+                     onselectstart="return false;"
+                     oncopy="return false;"
+                     ondragstart="return false;"
+                     unselectable="on">
+                    {{ challenge.description | markdown | safe }}
+                </div>
             </div>
         </div>
-        
+
         <form method="POST">
             <div class="mb-3">
                 <label for="code-editor" class="form-label">Your Code:</label>
-                <div id="code-editor" class="code-editor"></div>
+                <!-- Code editor container with protection -->
+                <div id="code-editor" class="code-editor"
+                     onpaste="validatePaste(event)"
+                     oncontextmenu="return false;"></div>
                 <textarea name="code" id="code-hidden" style="display: none;">{{ code }}</textarea>
             </div>
-            
+
             <div class="mb-3 d-flex justify-content-between">
                 <button type="submit" name="action" value="validate" class="btn btn-primary">Validate Solution</button>
             </div>
         </form>
-        
+
         {% if submission and submission.result %}
             <div class="card mt-4">
                 <div class="card-header">
@@ -30,7 +40,7 @@
                 </div>
                 <div class="card-body">
                     <div class="result-panel">{{ submission.result }}</div>
-                    
+
                     {% if submission.is_passing %}
                         <div class="alert alert-success mt-3">
                             <strong>Congratulations!</strong> Your solution passed all tests.
@@ -46,7 +56,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
     // Initialize Ace editor
@@ -55,9 +64,51 @@
     editor.session.setMode("ace/mode/python");
     editor.setValue(document.getElementById('code-hidden').value);
     
+    // Custom paste validation to control what can be pasted
+    function validatePaste(event) {
+        // If needed, you can add logic here to limit what can be pasted
+        // For now, we'll allow pasting only in the editor itself
+        if (!editor.isFocused()) {
+            event.preventDefault();
+            return false;
+        }
+    }
+    
+    // Add event listeners to disable keyboard shortcuts for copy operation
+    document.addEventListener('keydown', function(e) {
+        // Disable Ctrl+C, Cmd+C on the description
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            const selection = window.getSelection();
+            if(selection && selection.toString()) {
+                // Check if selection is within the challenge description
+                let container = document.querySelector('.challenge-description');
+                let selectedNode = selection.anchorNode;
+                
+                while (selectedNode != null) {
+                    if (selectedNode === container) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    selectedNode = selectedNode.parentNode;
+                }
+            }
+        }
+    });
+    
     // Update hidden textarea on form submit
     document.querySelector('form').addEventListener('submit', function() {
         document.getElementById('code-hidden').value = editor.getValue();
+    });
+    
+    // Make the challenge description unselectable with CSS
+    document.addEventListener('DOMContentLoaded', function() {
+        const description = document.querySelector('.challenge-description');
+        if (description) {
+            description.style.userSelect = 'none';
+            description.style.webkitUserSelect = 'none';
+            description.style.msUserSelect = 'none';
+            description.style.MozUserSelect = 'none';
+        }
     });
 </script>
 {% endblock %}
