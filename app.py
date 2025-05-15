@@ -370,7 +370,7 @@ def challenge_detail(challenge_id):
         student = Student.query.get(submission.student_id)
         if student.id not in student_progress:
             student_progress[student.id] = {
-                "email": student.email,
+                "last_name": student.last_name,
                 "submissions": 0,
                 "latest_submission": None,
                 "has_passed": False,
