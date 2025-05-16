@@ -57,13 +57,13 @@
                                     </td>
                                     <td>
                                         <a href="{{ url_for('view_submission', submission_id=student.latest_submission.id) }}" class="btn btn-sm btn-primary">View Latest</a>
-                                        <button class="btn btn-sm btn-outline-secondary show-all-submissions" data-student-id="{{ student.latest_submission.student_id }}">All Submissions</button>
+                                        <button class="btn btn-sm btn-outline-secondary show-all-submissions" data-student-id="{{ student.latest_submission.user_id }}">All Submissions</button>
                                     </td>
                                 </tr>
-                                <tr class="submissions-row" id="submissions-{{ student.latest_submission.student_id }}" style="display: none;">
+                                <tr class="submissions-row" id="submissions-{{ student.latest_submission.user_id }}" style="display: none;">
                                     <td colspan="5">
                                         <div class="list-group">
-                                            {% for sub in Submission.query.filter_by(student_id=student.latest_submission.student_id, challenge_id=challenge.id).order_by(Submission.created_at.desc()).all() %}
+                                            {% for sub in Submission.query.filter_by(user_id=student.latest_submission.user_id, challenge_id=challenge.id).order_by(Submission.created_at.desc()).all() %}
                                                 <a href="{{ url_for('view_submission', submission_id=sub.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                                     Submission on {{ sub.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
                                                     <span class="badge {% if sub.is_passing %}bg-success{% else %}bg-warning{% endif %}">

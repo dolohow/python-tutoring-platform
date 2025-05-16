@@ -35,12 +35,12 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h1><a href="{{ url_for('index') }}" class="text-decoration-none text-dark">Python Tutoring Platform</a></h1>
                 <div>
-                    {% if session.get('student_id') %}
-                        <span>Student: {{ session.get('student_email') }}</span>
+                    {% if session.get('user_role') == 'student' %}
+                        <span>Student: {{ session.get('user_email') }}</span>
                         <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-primary ms-2">Dashboard</a>
                         <a href="{{ url_for('logout') }}" class="btn btn-outline-danger ms-2">Logout</a>
-                    {% elif session.get('tutor_id') %}
-                        <span>Tutor: {{ session.get('tutor_name') }}</span>
+                    {% elif session.get('user_role') == 'tutor' %}
+                        <span>Tutor: {{ session.get('user_email') }}</span>
                         <a href="{{ url_for('tutor_dashboard') }}" class="btn btn-outline-primary ms-2">Dashboard</a>
                         <a href="{{ url_for('logout') }}" class="btn btn-outline-danger ms-2">Logout</a>
                     {% endif %}

@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 import sys
-from app import app, db, Student
+from app import app, db, User
 import uuid
 
 
 def invalidate_all_sessions():
     with app.app_context():
-        students = Student.query.all()
+        students = db.session.query(User).filter(User.role == "student").all()
         for student in students:
             student.session_id = str(uuid.uuid4())
         db.session.commit()
-        print("Successfully invalidated student sessions")
+        print("Successfully invalidated user sessions")
 
 
 def list_sessions():
     with app.app_context():
-        students = Student.query.all()
+        students = db.session.query(User).filter(User.role == "student").all()
         print(f"{'Email':<40} {'Last Login':<20} {'Session ID':<40}")
         print("-" * 100)
         for student in students:

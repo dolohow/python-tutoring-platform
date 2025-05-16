@@ -4,27 +4,32 @@
 <div class="text-center py-5">
     <h2>Welcome to Python Tutoring Platform</h2>
     <p class="lead">A simple platform for Python programming challenges.</p>
-    {% if not session.get('student_id') and not session.get('tutor_id') %}
-    <div class="row mt-5">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h3>For Students</h3>
-                    <p>Join with your name and start solving Python programming challenges.</p>
-                    <a href="{{ url_for('student_join') }}" class="btn btn-primary">Join as Student</a>
+    {% if not session.get('user_id') %}
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Login</h3>
+                    </div>
+                    <div class="text-start card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email address</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Login</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h3>For Tutors</h3>
-                    <p>Create challenges and monitor student progress.</p>
-                    <a href="{{ url_for('tutor_login') }}" class="btn btn-secondary">Login as Tutor</a>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 {% endblock %}

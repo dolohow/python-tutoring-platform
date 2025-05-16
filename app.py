@@ -1,4 +1,3 @@
-import datetime
 import os
 import subprocess
 import sys
@@ -29,43 +28,58 @@ def markdown_filter(text):
 
 
 @app.before_request
-def check_student_session():
-    # Skip verification for non-student routes and static files
-    if (
-        request.endpoint
-        and not request.endpoint.startswith("student_")
-        and not request.endpoint == "static"
-    ):
+def check_user_session():
+    # Skip verification for non-authenticated routes and static files
+    if request.endpoint in ["index", "static", "logout"] or request.endpoint is None:
         return
 
-    # Only verify student sessions for student routes
-    if request.endpoint and request.endpoint.startswith("student_"):
-        # Skip verification for student_join route to allow login
-        if request.endpoint == "student_join":
-            return
+    # Verify based on route prefix
+    if request.endpoint.startswith("student_") and "user_id" in session:
+        user = db.session.get(User, session["user_id"])
+        if (
+            not user
+            or user.session_id != session["session_id"]
+            or not user.is_student()
+        ):
+            session.clear()
+            flash(
+                "Your session has expired or you don't have permission. Please login again.",
+                "error",
+            )
+            return redirect(url_for("index"))
+    elif request.endpoint.startswith("tutor_") and "user_id" in session:
+        user = db.session.get(User, session["user_id"])
+        if not user or user.session_id != session["session_id"] or not user.is_tutor():
+            session.clear()
+            flash(
+                "Your session has expired or you don't have permission. Please login again.",
+                "error",
+            )
+            return redirect(url_for("index"))
+    elif "user_id" not in session:
+        return redirect(url_for("index"))
 
-        # Verify the session is valid
-        if "student_id" in session and "session_id" in session:
-            student = db.session.get(Student, session["student_id"])
-            if not student or student.session_id != session["session_id"]:
-                # Invalid or expired session, log them out
-                session.pop("student_id", None)
-                session.pop("student_email", None)
-                session.pop("session_id", None)
-                flash("Your session has expired. Please login again.", "error")
-                return redirect(url_for("student_join"))
-        else:
-            # No session found, redirect to login
-            return redirect(url_for("student_join"))
 
-
-# Models
-class Tutor(db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    challenges = db.relationship("Challenge", backref="tutor", lazy=True)
-    lessons = db.relationship("Lesson", backref="tutor", lazy=True)
+    first_name = db.Column(db.String(20), nullable=True)
+    last_name = db.Column(db.String(20), nullable=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(10), nullable=False, default="student")
+    session_id = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=func.now())
+    last_login = db.Column(db.DateTime, nullable=True)
+
+    submissions = db.relationship("Submission", backref="user", lazy=True)
+    challenges = db.relationship("Challenge", backref="creator", lazy=True)
+    lessons = db.relationship("Lesson", backref="creator", lazy=True)
+
+    def is_tutor(self):
+        return self.role == "tutor"
+
+    def is_student(self):
+        return self.role == "student"
 
 
 class Challenge(db.Model):
@@ -75,20 +89,8 @@ class Challenge(db.Model):
     initial_code = db.Column(db.Text, nullable=False)
     test_code = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=func.now())
-    tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     submissions = db.relationship("Submission", backref="challenge", lazy=True)
-
-
-class Student(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    first_name = db.Column(db.String(20), nullable=False)
-    last_name = db.Column(db.String(20), nullable=False)
-    session_id = db.Column(db.String(100), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=func.now())
-    last_login = db.Column(db.DateTime, nullable=True)
-    submissions = db.relationship("Submission", backref="student", lazy=True)
-    password_hash = db.Column(db.String(256), nullable=False)
 
 
 class Submission(db.Model):
@@ -97,7 +99,7 @@ class Submission(db.Model):
     result = db.Column(db.Text, nullable=True)
     is_passing = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=func.now())
-    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     challenge_id = db.Column(db.Integer, db.ForeignKey("challenge.id"), nullable=False)
 
 
@@ -106,7 +108,7 @@ class Lesson(db.Model):
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=func.now())
-    tutor_id = db.Column(db.Integer, db.ForeignKey("tutor.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     challenges = db.relationship(
         "Challenge", secondary="lesson_challenges", backref="lessons"
     )
@@ -123,73 +125,75 @@ lesson_challenges = db.Table(
 
 
 # Routes
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html")
-
-
-# Student Routes
-@app.route("/student/join", methods=["GET", "POST"])
-def student_join():
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
 
         if not email or not password:
             flash("Please fill out all fields", "error")
-            return redirect(url_for("student_join"))
+            return redirect(url_for("index"))
 
         if not email.endswith(EMAIL_DOMAIN):
             flash(
                 "Incorrect email, please provide your university email address", "error"
             )
-            return redirect(url_for("student_join"))
+            return redirect(url_for("index"))
 
-        existing_student = Student.query.filter_by(email=email).first()
-        if existing_student:
-            if check_password_hash(existing_student.password_hash, password):
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            if check_password_hash(existing_user.password_hash, password):
                 new_session_id = str(uuid.uuid4())
-                existing_student.session_id = new_session_id
-                existing_student.last_login = func.now()
+                existing_user.session_id = new_session_id
+                existing_user.last_login = func.now()
                 db.session.commit()
 
-                session["student_id"] = existing_student.id
-                session["student_email"] = existing_student.email
+                session["user_id"] = existing_user.id
+                session["user_email"] = existing_user.email
+                session["user_role"] = existing_user.role
+                print(existing_user.role)
                 session["session_id"] = new_session_id
-                flash("Welcome back, " + existing_student.email + "!", "success")
-                return redirect(url_for("student_dashboard"))
+
+                flash(
+                    f"Welcome back, {existing_user.first_name} {existing_user.last_name}!",
+                    "success",
+                )
+
+                if existing_user.is_tutor():
+                    return redirect(url_for("tutor_dashboard"))
+                else:
+                    return redirect(url_for("student_dashboard"))
             else:
                 flash("Incorrect password", "error")
-                return redirect(url_for("student_join"))
+                return redirect(url_for("index"))
 
         session_id = str(uuid.uuid4())
         password_hash = generate_password_hash(password)
-        new_student = Student(
+        new_user = User(
             email=email,
             session_id=session_id,
             password_hash=password_hash,
             last_login=func.now(),
         )
 
-        db.session.add(new_student)
+        db.session.add(new_user)
         db.session.commit()
 
-        session["student_id"] = new_student.id
-        session["student_email"] = new_student.email
+        session["user_id"] = new_user.id
+        session["user_email"] = new_user.email
+        session["user_role"] = new_user.role
         session["session_id"] = session_id
         flash("Account created successfully!", "success")
         return redirect(url_for("student_dashboard"))
 
-    return render_template("student_join.html")
+    return render_template("index.html")
 
 
 @app.route("/student/dashboard")
 def student_dashboard():
-    if "student_id" not in session:
-        return redirect(url_for("student_join"))
-
     challenges = Challenge.query.all()
-    submissions = Submission.query.filter_by(student_id=session["student_id"]).all()
+    submissions = Submission.query.filter_by(user_id=session["user_id"]).all()
 
     completed_challenges = set(
         submission.challenge_id for submission in submissions if submission.is_passing
@@ -204,15 +208,12 @@ def student_dashboard():
 
 @app.route("/student/challenge/<int:challenge_id>", methods=["GET", "POST"])
 def student_challenge(challenge_id):
-    if "student_id" not in session:
-        return redirect(url_for("student_join"))
-
     challenge = Challenge.query.get_or_404(challenge_id)
 
     # Get the student's latest submission for this challenge, if any
     submission = (
         Submission.query.filter_by(
-            student_id=session["student_id"], challenge_id=challenge_id
+            user_id=session["user_id"], challenge_id=challenge_id
         )
         .order_by(Submission.created_at.desc())
         .first()
@@ -224,7 +225,7 @@ def student_challenge(challenge_id):
         code = request.form.get("code")
 
         new_submission = Submission(
-            code=code, student_id=session["student_id"], challenge_id=challenge_id
+            code=code, user_id=session["user_id"], challenge_id=challenge_id
         )
 
         result, is_passing = run_code_with_tests(code, challenge.test_code)
@@ -247,45 +248,21 @@ def student_challenge(challenge_id):
 # Tutor Routes
 @app.route("/tutor/dashboard")
 def tutor_dashboard():
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
-    tutor = Tutor.query.get(session["tutor_id"])
-    challenges = Challenge.query.filter_by(tutor_id=tutor.id).all()
+    user = User.query.get(session["user_id"])
+    challenges = Challenge.query.filter_by(user_id=session["user_id"]).all()
 
     submissions = Submission.query.order_by(Submission.created_at.desc()).limit(25)
 
     return render_template(
         "tutor_dashboard.html",
-        tutor=tutor,
+        tutor=user,
         challenges=challenges,
         submissions=submissions,
     )
 
 
-@app.route("/tutor/login", methods=["GET", "POST"])
-def tutor_login():
-    if request.method == "POST":
-        email = request.form.get("email")
-        tutor = Tutor.query.filter_by(email=email).first()
-
-        if not tutor:
-            flash("Tutor not found", "error")
-            return redirect(url_for("tutor_login"))
-
-        session["tutor_id"] = tutor.id
-        session["tutor_name"] = tutor.name
-
-        return redirect(url_for("tutor_dashboard"))
-
-    return render_template("tutor_login.html")
-
-
 @app.route("/tutor/create_challenge", methods=["GET", "POST"])
 def create_challenge():
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     if request.method == "POST":
         title = request.form.get("title")
         description = request.form.get("description")
@@ -297,7 +274,7 @@ def create_challenge():
             description=description,
             initial_code=initial_code,
             test_code=test_code,
-            tutor_id=session["tutor_id"],
+            user_id=session["user_id"],
         )
 
         db.session.add(new_challenge)
@@ -311,13 +288,10 @@ def create_challenge():
 
 @app.route("/tutor/edit_challenge/<int:challenge_id>", methods=["GET", "POST"])
 def edit_challenge(challenge_id):
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     challenge = Challenge.query.get_or_404(challenge_id)
 
     # Ensure this challenge belongs to the current tutor
-    if challenge.tutor_id != session["tutor_id"]:
+    if challenge.user_id != session["user_id"]:
         flash("You do not have permission to edit this challenge", "error")
         return redirect(url_for("tutor_dashboard"))
 
@@ -337,15 +311,12 @@ def edit_challenge(challenge_id):
 
 @app.route("/tutor/submission/<int:submission_id>")
 def view_submission(submission_id):
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     submission = Submission.query.get_or_404(submission_id)
-    student = Student.query.get(submission.student_id)
+    student = User.query.get(submission.user_id)
     challenge = Challenge.query.get(submission.challenge_id)
 
     # Verify this challenge belongs to the current tutor
-    if challenge.tutor_id != session["tutor_id"]:
+    if challenge.user_id != session["user_id"]:
         flash("You do not have permission to view this submission", "error")
         return redirect(url_for("tutor_dashboard"))
 
@@ -359,15 +330,12 @@ def view_submission(submission_id):
 
 @app.route("/tutor/challenge/<int:challenge_id>")
 def challenge_detail(challenge_id):
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     challenge = Challenge.query.get_or_404(challenge_id)
     submissions = Submission.query.filter_by(challenge_id=challenge_id).all()
 
     student_progress = {}
     for submission in submissions:
-        student = Student.query.get(submission.student_id)
+        student = User.query.get(submission.user_id)
         if student.id not in student_progress:
             student_progress[student.id] = {
                 "last_name": student.last_name,
@@ -398,11 +366,11 @@ def challenge_detail(challenge_id):
 
 @app.route("/logout")
 def logout():
-    if "student_id" in session:
+    if "user_id" in session:
         # Update the session ID in the database when the user logs out
-        student = db.session.get(Student, session["student_id"])
-        if student:
-            student.session_id = str(uuid.uuid4())
+        user = db.session.get(User, session["user_id"])
+        if user:
+            user.session_id = str(uuid.uuid4())
             db.session.commit()
 
     session.clear()
@@ -412,33 +380,27 @@ def logout():
 
 @app.route("/tutor/lessons")
 def tutor_lessons():
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
+    user = User.query.get(session["user_id"])
+    lessons = Lesson.query.filter_by(user_id=session["user_id"]).all()
 
-    tutor = Tutor.query.get(session["tutor_id"])
-    lessons = Lesson.query.filter_by(tutor_id=tutor.id).all()
-
-    return render_template("tutor_lessons.html", tutor=tutor, lessons=lessons)
+    return render_template("tutor_lessons.html", tutor=user, lessons=lessons)
 
 
 @app.route("/tutor/create_lesson", methods=["GET", "POST"])
 def create_lesson():
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     if request.method == "POST":
         title = request.form.get("title")
         description = request.form.get("description")
 
         new_lesson = Lesson(
-            title=title, description=description, tutor_id=session["tutor_id"]
+            title=title, description=description, user_id=session["user_id"]
         )
 
         # Get selected challenges
         challenge_ids = request.form.getlist("challenges")
         for challenge_id in challenge_ids:
             challenge = Challenge.query.get(challenge_id)
-            if challenge and challenge.tutor_id == session["tutor_id"]:
+            if challenge and challenge.user_id == session["user_id"]:
                 new_lesson.challenges.append(challenge)
 
         db.session.add(new_lesson)
@@ -448,19 +410,16 @@ def create_lesson():
         return redirect(url_for("tutor_lessons"))
 
     # Get all challenges created by this tutor
-    challenges = Challenge.query.filter_by(tutor_id=session["tutor_id"]).all()
+    challenges = Challenge.query.filter_by(user_id=session["user_id"]).all()
     return render_template("create_lesson.html", challenges=challenges)
 
 
 @app.route("/tutor/lesson/<int:lesson_id>")
 def lesson_detail(lesson_id):
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     lesson = Lesson.query.get_or_404(lesson_id)
 
     # Ensure this lesson belongs to the current tutor
-    if lesson.tutor_id != session["tutor_id"]:
+    if lesson.user_id != session["user_id"]:
         flash("You do not have permission to view this lesson", "error")
         return redirect(url_for("tutor_dashboard"))
 
@@ -474,9 +433,9 @@ def lesson_detail(lesson_id):
         students_completed = set()
 
         for submission in submissions:
-            students_attempted.add(submission.student_id)
+            students_attempted.add(submission.user_id)
             if submission.is_passing:
-                students_completed.add(submission.student_id)
+                students_completed.add(submission.user_id)
 
         challenges_data.append(
             {
@@ -493,13 +452,10 @@ def lesson_detail(lesson_id):
 
 @app.route("/tutor/edit_lesson/<int:lesson_id>", methods=["GET", "POST"])
 def edit_lesson(lesson_id):
-    if "tutor_id" not in session:
-        return redirect(url_for("tutor_login"))
-
     lesson = Lesson.query.get_or_404(lesson_id)
 
     # Ensure this lesson belongs to the current tutor
-    if lesson.tutor_id != session["tutor_id"]:
+    if lesson.user_id != session["user_id"]:
         flash("You do not have permission to edit this lesson", "error")
         return redirect(url_for("tutor_dashboard"))
 
@@ -512,7 +468,7 @@ def edit_lesson(lesson_id):
         challenge_ids = request.form.getlist("challenges")
         for challenge_id in challenge_ids:
             challenge = Challenge.query.get(challenge_id)
-            if challenge and challenge.tutor_id == session["tutor_id"]:
+            if challenge and challenge.user_id == session["user_id"]:
                 lesson.challenges.append(challenge)
 
         db.session.commit()
@@ -521,7 +477,7 @@ def edit_lesson(lesson_id):
         return redirect(url_for("lesson_detail", lesson_id=lesson.id))
 
     # Get all challenges created by this tutor
-    all_challenges = Challenge.query.filter_by(tutor_id=session["tutor_id"]).all()
+    all_challenges = Challenge.query.filter_by(user_id=session["user_id"]).all()
     selected_challenge_ids = [c.id for c in lesson.challenges]
 
     return render_template(
@@ -534,11 +490,7 @@ def edit_lesson(lesson_id):
 
 @app.route("/student/lessons")
 def student_lessons():
-    if "student_id" not in session:
-        return redirect(url_for("student_join"))
-
     lessons = Lesson.query.all()
-    student_id = session["student_id"]
 
     # For each lesson, calculate completion percentage
     lessons_data = []
@@ -551,7 +503,9 @@ def student_lessons():
             for challenge in lesson.challenges:
                 # Check if student has passed this challenge
                 submission = Submission.query.filter_by(
-                    student_id=student_id, challenge_id=challenge.id, is_passing=True
+                    user_id=session["user_id"],
+                    challenge_id=challenge.id,
+                    is_passing=True,
                 ).first()
 
                 if submission:
@@ -575,18 +529,14 @@ def student_lessons():
 
 @app.route("/student/lesson/<int:lesson_id>")
 def student_lesson_detail(lesson_id):
-    if "student_id" not in session:
-        return redirect(url_for("student_join"))
-
     lesson = Lesson.query.get_or_404(lesson_id)
-    student_id = session["student_id"]
 
     # For each challenge in this lesson, get student's progress
     challenges_data = []
     for challenge in lesson.challenges:
         # Check if student has passed this challenge
         submission = Submission.query.filter_by(
-            student_id=student_id, challenge_id=challenge.id, is_passing=True
+            user_id=session["user_id"], challenge_id=challenge.id, is_passing=True
         ).first()
 
         challenges_data.append(
@@ -594,7 +544,7 @@ def student_lesson_detail(lesson_id):
                 "challenge": challenge,
                 "completed": submission is not None,
                 "last_submission": Submission.query.filter_by(
-                    student_id=student_id, challenge_id=challenge.id
+                    user_id=session["user_id"], challenge_id=challenge.id
                 )
                 .order_by(Submission.created_at.desc())
                 .first(),
