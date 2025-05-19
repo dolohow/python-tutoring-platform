@@ -5,8 +5,8 @@
 
 <div class="row mb-4">
     <div class="col">
-        <a href="{{ url_for('create_lesson') }}" class="btn btn-primary">Create New Lesson</a>
-        <a href="{{ url_for('tutor_dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
+        <a href="{{ url_for('tutor.create_lesson') }}" class="btn btn-primary">Create New Lesson</a>
+        <a href="{{ url_for('tutor.dashboard') }}" class="btn btn-outline-secondary">Back to Dashboard</a>
     </div>
 </div>
 
@@ -18,7 +18,7 @@
         {% if lessons %}
             <div class="list-group">
                 {% for lesson in lessons %}
-                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('tutor.lesson_detail', lesson_id=lesson.id) }}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h5 class="mb-1">{{ lesson.title }}</h5>
                             <span class="badge bg-primary">{{ lesson.challenges|length }} Challenges</span>

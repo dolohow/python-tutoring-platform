@@ -5,8 +5,8 @@
     <div class="col-md-12">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('tutor_dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('challenge_detail', challenge_id=challenge.id) }}">{{ challenge.title }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('tutor.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('tutor.challenge_detail', challenge_id=challenge.id) }}">{{ challenge.title }}</a></li>
                 <li class="breadcrumb-item active">{{ student.last_name }}'s Submission</li>
             </ol>
         </nav>

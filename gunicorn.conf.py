@@ -11,4 +11,4 @@ keepalive = 5
 loglevel = "info"
 accesslog = "-"
 errorlog = "-"
-wsgi_app = "app:app"
+wsgi_app = "wsgi:create_app()"

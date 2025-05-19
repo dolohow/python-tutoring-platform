@@ -5,7 +5,7 @@
 
 <div class="row mb-4">
     <div class="col">
-        <a href="{{ url_for('student_lessons') }}" class="btn btn-primary">View Lessons</a>
+        <a href="{{ url_for('student.view_lessons') }}" class="btn btn-primary">View Lessons</a>
     </div>
 </div>
 
@@ -17,7 +17,7 @@
         {% if challenges %}
             <div class="list-group">
                 {% for challenge in challenges %}
-                    <a href="{{ url_for('student_challenge', challenge_id=challenge.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <a href="{{ url_for('student.challenge_detail', challenge_id=challenge.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                         {{ challenge.title }}
                         {% if challenge.id in completed_challenges %}
                             <span class="badge bg-success">Completed</span>

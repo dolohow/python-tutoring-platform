@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+
 import sys
-from app import app, db, User
+from app import create_app, db
+from app.models import User
 import uuid
+
+app = create_app()
 
 
 def invalidate_all_sessions():
