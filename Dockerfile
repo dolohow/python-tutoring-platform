@@ -1,22 +1,27 @@
 FROM python:3.13-slim
 
-WORKDIR /usr/src/app
 
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/home/app/.local/bin:$PATH"
+
+RUN apt update && apt install -y --no-install-recommends \
     gcc \
-    && rm -rf /var/lib/apt/lists/*
+    libpq-dev \
+    libc6-dev \
+ && apt purge -y --auto-remove \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd app \
-    && useradd --create-home -g app app
+RUN groupadd --system app && useradd --create-home --system --gid app app
 
+WORKDIR /home/app
 USER app
-ENV PATH="/home/app/.local/bin:$PATH"
 
-COPY requirements.txt ./
+COPY --chown=app:app requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY gunicorn.conf.py wsgi.py manage_sessions.py .
-COPY app app
+COPY --chown=app:app gunicorn.conf.py wsgi.py manage_sessions.py ./
+COPY --chown=app:app app app
+COPY --chown=app:app migrations migrations
 
 CMD ["gunicorn"]
