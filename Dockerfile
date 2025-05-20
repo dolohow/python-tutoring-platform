@@ -1,13 +1,19 @@
 FROM python:3.13-slim
 
+WORKDIR /usr/src/app
+
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+RUN groupadd app \
+    && useradd --create-home -g app app
 
-COPY requirements.txt .
+USER app
+ENV PATH="/home/app/.local/bin:$PATH"
+
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY gunicorn.conf.py wsgi.py manage_sessions.py .
