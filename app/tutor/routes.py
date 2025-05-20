@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
-from app.models import User, Challenge, Submission, Lesson
+from app.models import User, Challenge, Submission, Lesson, Group
 from app.decorators import tutor_required
 
 from app import db
@@ -141,14 +141,18 @@ def view_lessons():
     return render_template("tutor/lessons.html", tutor=user, lessons=lessons)
 
 
-@tutor.route("/tutor/create_lesson", methods=["GET", "POST"])
+@tutor.route("/create_lesson", methods=["GET", "POST"])
 def create_lesson():
     if request.method == "POST":
         title = request.form.get("title")
         description = request.form.get("description")
+        visible = True if request.form.get("visible") == "on" else False
 
         new_lesson = Lesson(
-            title=title, description=description, user_id=session["user_id"]
+            title=title,
+            description=description,
+            user_id=session["user_id"],
+            visible=visible,
         )
 
         # Get selected challenges
@@ -217,6 +221,7 @@ def edit_lesson(lesson_id):
     if request.method == "POST":
         lesson.title = request.form.get("title")
         lesson.description = request.form.get("description")
+        lesson.visible = True if request.form.get("visible") == "on" else False
 
         # Update challenges
         lesson.challenges = []
@@ -240,4 +245,112 @@ def edit_lesson(lesson_id):
         lesson=lesson,
         all_challenges=all_challenges,
         selected_challenge_ids=selected_challenge_ids,
+    )
+
+
+@tutor.route("/groups")
+def view_groups():
+    user = User.query.get(session["user_id"])
+    groups = Group.query.order_by(Group.year.desc(), Group.name).all()
+
+    return render_template("tutor/groups.html", tutor=user, groups=groups)
+
+
+@tutor.route("/create_group", methods=["GET", "POST"])
+def create_group():
+    if request.method == "POST":
+        name = request.form.get("name")
+        year = request.form.get("year")
+
+        new_group = Group(name=name, year=year)
+
+        db.session.add(new_group)
+        db.session.commit()
+
+        flash("Group created successfully!", "success")
+        return redirect(url_for("tutor.view_groups"))
+
+    return render_template("tutor/create_group.html")
+
+
+@tutor.route("/edit_group/<int:group_id>", methods=["GET", "POST"])
+def edit_group(group_id):
+    group = Group.query.get_or_404(group_id)
+
+    if request.method == "POST":
+        group.name = request.form.get("name")
+        group.year = request.form.get("year")
+
+        db.session.commit()
+
+        flash("Group updated successfully!", "success")
+        return redirect(url_for("tutor.view_groups"))
+
+    return render_template("tutor/edit_group.html", group=group)
+
+
+@tutor.route("/group/<int:group_id>")
+def group_detail(group_id):
+    group = Group.query.get_or_404(group_id)
+    students = User.query.filter_by(group_id=group_id, role="student").all()
+
+    return render_template("tutor/group_detail.html", group=group, students=students)
+
+
+@tutor.route("/manage_group_lessons/<int:group_id>", methods=["GET", "POST"])
+def manage_group_lessons(group_id):
+    group = Group.query.get_or_404(group_id)
+
+    if request.method == "POST":
+        # Clear current enabled lessons
+        group.enabled_lessons = []
+
+        # Add newly selected lessons
+        lesson_ids = request.form.getlist("lessons")
+        for lesson_id in lesson_ids:
+            lesson = Lesson.query.get(lesson_id)
+            if lesson:
+                group.enabled_lessons.append(lesson)
+
+        db.session.commit()
+
+        flash("Group lessons updated successfully!", "success")
+        return redirect(url_for("tutor.group_detail", group_id=group.id))
+
+    # Get all lessons created by this tutor
+    lessons = Lesson.query.filter_by(user_id=session["user_id"]).all()
+    enabled_lesson_ids = [lesson.id for lesson in group.enabled_lessons]
+
+    return render_template(
+        "tutor/manage_group_lessons.html",
+        group=group,
+        lessons=lessons,
+        enabled_lesson_ids=enabled_lesson_ids,
+    )
+
+
+@tutor.route("/assign_students", methods=["GET", "POST"])
+def assign_students():
+    groups = Group.query.order_by(Group.year.desc(), Group.name).all()
+    students = User.query.filter_by(role="student").order_by(User.last_name).all()
+
+    if request.method == "POST":
+        for student_id in request.form:
+            if student_id.startswith("student_"):
+                user_id = int(student_id.replace("student_", ""))
+                group_id = request.form.get(student_id)
+
+                student = User.query.get(user_id)
+                if student and student.role == "student":
+                    if group_id == "none":
+                        student.group_id = None
+                    else:
+                        student.group_id = int(group_id)
+
+        db.session.commit()
+        flash("Student group assignments updated successfully!", "success")
+        return redirect(url_for("tutor.view_groups"))
+
+    return render_template(
+        "tutor/assign_students.html", groups=groups, students=students
     )

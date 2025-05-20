@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Create Group</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label">Group Name</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+                <small class="form-text text-muted">e.g., "I", "II", "Advanced", etc.</small>
+            </div>
+            
+            <div class="mb-3">
+                <label for="year" class="form-label">Academic Year</label>
+                <input type="number" class="form-control" id="year" name="year" required>
+                <small class="form-text text-muted">e.g., 2025</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Create Group</button>
+            <a href="{{ url_for('tutor.view_groups') }}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,9 +1,8 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <h2>Create New Lesson</h2>
+        <h2>Create Lesson</h2>
         <form method="POST">
             <div class="mb-3">
                 <label for="title" class="form-label">Title</label>
@@ -13,6 +12,12 @@
             <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="visible" name="visible">
+                <label class="form-check-label" for="visible">Make globally visible to all students</label>
+                <small class="form-text text-muted">If unchecked, the lesson will only be visible to students in groups where it's enabled.</small>
             </div>
             
             <div class="mb-3">

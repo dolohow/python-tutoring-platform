@@ -1,15 +1,13 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <h2>Tutor Dashboard - {{ tutor.first_name }} {{ tutor.last_name }}</h2>
-
 <div class="row mb-4">
     <div class="col">
         <a href="{{ url_for('tutor.create_challenge') }}" class="btn btn-primary">Create New Challenge</a>
         <a href="{{ url_for('tutor.view_lessons') }}" class="btn btn-primary">Manage Lessons</a>
+        <a href="{{ url_for('tutor.view_groups') }}" class="btn btn-primary">Manage Groups</a>
     </div>
 </div>
-
 <div class="row">
     <div class="col-md-6">
         <div class="card">

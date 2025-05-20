@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, session
 
 from app import db
 from app.decorators import student_required
-from app.models import Challenge, Submission, Lesson
+from app.models import Challenge, Submission, Lesson, User, Group
 from app.services import run_code_with_tests
 
 
@@ -18,16 +18,33 @@ def before_request():
 
 @student.route("/dashboard")
 def dashboard():
-    challenges = Challenge.query.all()
     submissions = Submission.query.filter_by(user_id=session["user_id"]).all()
+    user = db.session.query(User).get(session["user_id"])
+    group = db.session.query(Group).get(user.group_id) if user.group_id else None
 
     completed_challenges = set(
         submission.challenge_id for submission in submissions if submission.is_passing
     )
 
+    # Add challenges from lessons enabled for the student's group
+    available_challenges = []
+    if group:
+        for lesson in group.enabled_lessons:
+            for challenge in lesson.challenges:
+                if challenge not in available_challenges:
+                    available_challenges.append(challenge)
+
+    # Add challenges from globally visible lessons
+    visible_lessons = Lesson.query.filter_by(visible=True).all()
+    for lesson in visible_lessons:
+        for challenge in lesson.challenges:
+            if challenge not in available_challenges:
+                available_challenges.append(challenge)
+
     return render_template(
         "student/dashboard.html",
-        challenges=challenges,
+        group=group,
+        challenges=available_challenges,
         completed_challenges=completed_challenges,
     )
 
@@ -73,7 +90,11 @@ def challenge_detail(challenge_id):
 
 @student.route("/lessons")
 def view_lessons():
-    lessons = Lesson.query.all()
+    user = db.session.query(User).get(session["user_id"])
+    lessons = Lesson.query.filter_by(visible=True).all()
+    if user.group_id:
+        group = db.session.query(Group).get(user.group_id)
+        lessons.extend(group.enabled_lessons)
 
     # For each lesson, calculate completion percentage
     lessons_data = []

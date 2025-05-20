@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<h2>Student Dashboard - {{ session.get('user_email') }}</h2>
+{% if group %}
+<h2>Student Dashboard - {{ session.get('user_email') }} - <strong>group {{ group.name }}</strong> (Year {{ group.year }}) </h2>
+{% else %}
+<h2>Student Dashboard - {{ session.get('user_email') }} </h2>
+{% endif %}
 
 <div class="row mb-4">
     <div class="col">
@@ -33,4 +36,3 @@
     </div>
 </div>
 {% endblock %}
-

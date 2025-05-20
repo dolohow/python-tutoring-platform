@@ -4,8 +4,27 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 
 
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=func.now())
+    users = db.relationship("User", backref="group", lazy=True)
+    enabled_lessons = db.relationship(
+        "Lesson", secondary="group_lessons", backref="enabled_groups"
+    )
+
+
+group_lessons = db.Table(
+    "group_lessons",
+    db.Column("group_id", db.Integer, db.ForeignKey("group.id"), primary_key=True),
+    db.Column("lesson_id", db.Integer, db.ForeignKey("lesson.id"), primary_key=True),
+)
+
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=True)
     email = db.Column(db.String(100), unique=True, nullable=False)
     first_name = db.Column(db.String(20), nullable=True)
     last_name = db.Column(db.String(20), nullable=True)
@@ -59,6 +78,7 @@ class Lesson(db.Model):
     description = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    visible = db.Column(db.Boolean, default=False)
     challenges = db.relationship(
         "Challenge", secondary="lesson_challenges", backref="lessons"
     )
