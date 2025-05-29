@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Edit Multiple Choice Question</h2>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="title" class="form-label">Question Title</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ question.title }}" required>
+                <div class="form-text">A short title for this question</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="text" class="form-label">Question Text</label>
+                <textarea class="form-control" id="text" name="text" rows="5" required>{{ question.text }}</textarea>
+                <div class="form-text">The full text of the question. You can use Markdown for formatting.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Answer Options</label>
+                <p>Check the box next to each correct answer (can have multiple correct answers)</p>
+                
+                <div id="options-container">
+                    {% for option in question.options %}
+                    <div class="option-row mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input" type="checkbox" name="is_correct_{{ loop.index0 }}" id="is_correct_{{ loop.index0 }}" {% if option.is_correct %}checked{% endif %}>
+                            </div>
+                            <input type="text" class="form-control" name="option_{{ loop.index0 }}" value="{{ option.text }}" placeholder="Option {{ loop.index }}" required>
+                            <button type="button" class="btn btn-outline-danger remove-option" {% if question.options|length <= 2 %}disabled{% endif %}>Remove</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <input type="hidden" id="option_count" name="option_count" value="{{ question.options|length }}">
+                
+                <button type="button" id="add-option" class="btn btn-outline-primary mt-2">Add Another Option</button>
+            </div>
+            
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Update Question</button>
+                <a href="{{ url_for('tutor.view_questions') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const optionsContainer = document.getElementById('options-container');
+        const addOptionBtn = document.getElementById('add-option');
+        const optionCountInput = document.getElementById('option_count');
+        
+        let optionCount = {{ question.options|length }};
+        
+        addOptionBtn.addEventListener('click', function() {
+            const newOptionRow = document.createElement('div');
+            newOptionRow.className = 'option-row mb-2';
+            
+            newOptionRow.innerHTML = `
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input class="form-check-input" type="checkbox" name="is_correct_${optionCount}" id="is_correct_${optionCount}">
+                    </div>
+                    <input type="text" class="form-control" name="option_${optionCount}" placeholder="Option ${optionCount+1}" required>
+                    <button type="button" class="btn btn-outline-danger remove-option">Remove</button>
+                </div>
+            `;
+            
+            optionsContainer.appendChild(newOptionRow);
+            optionCount++;
+            optionCountInput.value = optionCount;
+            
+            if (optionCount > 2) {
+                document.querySelectorAll('.remove-option').forEach(btn => {
+                    btn.disabled = false;
+                });
+            }
+            
+            const removeBtn = newOptionRow.querySelector('.remove-option');
+            removeBtn.addEventListener('click', removeOptionHandler);
+        });
+        
+        function removeOptionHandler() {
+            const row = this.closest('.option-row');
+            row.remove();
+            optionCount--;
+            optionCountInput.value = optionCount;
+            
+            if (optionCount <= 2) {
+                document.querySelectorAll('.remove-option').forEach(btn => {
+                    btn.disabled = true;
+                });
+            }
+            
+            renumberOptions();
+        }
+        
+        function renumberOptions() {
+            const optionRows = document.querySelectorAll('.option-row');
+            optionRows.forEach((row, index) => {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                const textInput = row.querySelector('input[type="text"]');
+                
+                checkbox.name = `is_correct_${index}`;
+                checkbox.id = `is_correct_${index}`;
+                textInput.name = `option_${index}`;
+                textInput.placeholder = `Option ${index + 1}`;
+            });
+        }
+        
+        document.querySelectorAll('.remove-option').forEach(btn => {
+            btn.addEventListener('click', removeOptionHandler);
+        });
+    });
+</script>
+{% endblock %}

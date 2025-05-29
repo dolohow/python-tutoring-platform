@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <div class="row">
     <div class="col-md-12">
@@ -25,8 +24,41 @@
             <div class="card-body">
                 <h4>Description</h4>
                 <p>{{ lesson.description }}</p>
-                
-                <h4>Challenges</h4>
+            </div>
+        </div>
+
+        <!-- Questions Section -->
+        {% if questions_data %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Multiple Choice Questions</h3>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for question_data in questions_data %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ question_data.question.title }}</h5>
+                                <div>
+                                    <span class="badge bg-primary">{{ question_data.students_attempted }} Attempted</span>
+                                    <span class="badge bg-success">{{ question_data.students_completed }} Completed</span>
+                                </div>
+                            </div>
+                            <p class="mb-1">{{ question_data.question.text|truncate(100) | markdown | safe }}</p>
+                            <a href="{{ url_for('tutor.question_detail', question_id=question_data.question.id) }}" class="btn btn-sm btn-outline-secondary mt-2">View Question</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Challenges Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Challenges</h3>
+            </div>
+            <div class="card-body">
                 {% if lesson.challenges %}
                     <div class="list-group">
                         {% for challenge_data in challenges_data %}

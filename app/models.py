@@ -4,6 +4,52 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 
 
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+
+    # Multiple choice options stored as JSON string
+    # Format: [{"text": "Option text", "is_correct": true/false}, ...]
+    options = db.Column(db.JSON, nullable=False)
+
+    # Many-to-many relationship with Lesson (questions can be in multiple lessons)
+    lessons = db.relationship(
+        "Lesson",
+        secondary="lesson_questions",
+        backref=db.backref("questions", lazy="dynamic"),
+    )
+    # Foreign key to the user (tutor) who created the question
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user = db.relationship("User", backref=db.backref("questions", lazy=True))
+
+    created_at = db.Column(db.DateTime, default=func.now())
+
+
+lesson_questions = db.Table(
+    "lesson_questions",
+    db.Column("lesson_id", db.Integer, db.ForeignKey("lesson.id"), primary_key=True),
+    db.Column(
+        "question_id", db.Integer, db.ForeignKey("question.id"), primary_key=True
+    ),
+)
+
+
+class QuestionSubmission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey("question.id"), nullable=False)
+    # Selected answers as JSON array of option indices
+    selected_options = db.Column(db.JSON, nullable=False)
+    is_correct = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=func.now())
+
+    user = db.relationship(
+        "User", backref=db.backref("question_submissions", lazy=True)
+    )
+    question = db.relationship("Question", backref=db.backref("submissions", lazy=True))
+
+
 class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)

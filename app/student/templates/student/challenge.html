@@ -2,6 +2,17 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
+        <!-- Progress indicator -->
+        {% if current_index is not none and total_challenges > 1 %}
+        <div class="mb-3">
+            <small class="text-muted">Challenge {{ current_index + 1 }} of {{ total_challenges }}</small>
+            <div class="progress" style="height: 5px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: {{ ((current_index + 1) / total_challenges * 100) | round(1) }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+        
         <h2>{{ challenge.title }}</h2>
         <div class="card mb-4">
             <div class="card-body">
@@ -53,6 +64,44 @@
                 </div>
             </div>
         {% endif %}
+        
+        <!-- Navigation buttons -->
+        <div class="mt-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    {% if previous_challenge %}
+                    <a href="{{ url_for('student.challenge_detail', challenge_id=previous_challenge.id) }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    {% if lesson %}
+                    <a href="{{ url_for('student.lesson_detail', lesson_id=lesson.id) }}" 
+                       class="btn btn-secondary">Back to Lesson</a>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    {% if next_challenge %}
+                    <a href="{{ url_for('student.challenge_detail', challenge_id=next_challenge.id) }}" 
+                       class="btn btn-primary">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% else %}
+                    <!-- If this is the last challenge and completed, show completion button -->
+                    {% if submission and submission.is_passing and lesson %}
+                    <a href="{{ url_for('student.lesson_detail', lesson_id=lesson.id) }}" 
+                       class="btn btn-success">
+                        <i class="fas fa-check"></i> Challenges Complete
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Progress indicator -->
+        {% if current_index is not none and total_questions > 1 %}
+        <div class="mb-3">
+            <small class="text-muted">Question {{ current_index + 1 }} of {{ total_questions }}</small>
+            <div class="progress" style="height: 5px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: {{ ((current_index + 1) / total_questions * 100) | round(1) }}%"></div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <h2>{{ question.title }}</h2>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4>Question</h4>
+                <div class="question-text">
+                    {{ question.text | markdown | safe }}
+                </div>
+            </div>
+        </div>
+        
+        {% if not answered_correctly %}
+        <!-- Active form for unanswered questions -->
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label"><strong>Select the correct answer(s):</strong></label>
+                <div class="options-list">
+                    {% for option in question.options %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="selected_options" value="{{ loop.index0 }}" id="option{{ loop.index0 }}">
+                        <label class="form-check-label" for="option{{ loop.index0 }}">
+                            {{ option.text }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">Submit Answer</button>
+            </div>
+        </form>
+        {% else %}
+        <!-- Read-only view for answered questions -->
+        <div class="alert alert-success mb-4">
+            <i class="fas fa-check-circle"></i>
+            <strong>Correct!</strong> You've successfully answered this question.
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Your Answer</h5>
+                <div class="options-list">
+                    {% for option in question.options %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               id="readonly-option{{ loop.index0 }}"
+                               {% if loop.index0|string in correct_submission.selected_options %}checked{% endif %}
+                               disabled>
+                        <label class="form-check-label text-muted" for="readonly-option{{ loop.index0 }}">
+                            {{ option.text }}
+                            {% if option.is_correct %}
+                                <span class="badge bg-success ms-2">Correct</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Navigation buttons -->
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div>
+                {% if previous_question %}
+                <a href="{{ url_for('student.view_question', question_id=previous_question.id, lesson_id=lesson.id) }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+                {% endif %}
+            </div>
+            
+            <div>
+                <a href="{{ url_for('student.lesson_detail', lesson_id=lesson.id) }}" 
+                   class="btn btn-secondary">Back to Lesson</a>
+            </div>
+            
+            <div>
+                {% if next_question %}
+                <a href="{{ url_for('student.view_question', question_id=next_question.id, lesson_id=lesson.id) }}" 
+                   class="btn btn-primary">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <!-- If this is the last question, show a "Finish" or completion button -->
+                {% if answered_correctly %}
+                <a href="{{ url_for('student.lesson_detail', lesson_id=lesson.id) }}" 
+                   class="btn btn-success">
+                    <i class="fas fa-check"></i> Lesson Complete
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

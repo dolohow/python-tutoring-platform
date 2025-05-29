@@ -1,6 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
-from app.models import User, Challenge, Submission, Lesson, Group
+from app.models import (
+    User,
+    Challenge,
+    Submission,
+    Lesson,
+    Group,
+    Question,
+    QuestionSubmission,
+)
 from app.decorators import tutor_required
 
 from app import db
@@ -162,6 +170,13 @@ def create_lesson():
             if challenge and challenge.user_id == session["user_id"]:
                 new_lesson.challenges.append(challenge)
 
+        # Get selected questions
+        question_ids = request.form.getlist("questions")
+        for question_id in question_ids:
+            question = Question.query.get(question_id)
+            if question and question.user_id == session["user_id"]:
+                new_lesson.questions.append(question)
+
         db.session.add(new_lesson)
         db.session.commit()
 
@@ -170,7 +185,10 @@ def create_lesson():
 
     # Get all challenges created by this tutor
     challenges = Challenge.query.filter_by(user_id=session["user_id"]).all()
-    return render_template("tutor/create_lesson.html", challenges=challenges)
+    questions = Question.query.filter_by(user_id=session["user_id"]).all()
+    return render_template(
+        "tutor/create_lesson.html", challenges=challenges, questions=questions
+    )
 
 
 @tutor.route("/lesson/<int:lesson_id>")
@@ -204,8 +222,33 @@ def lesson_detail(lesson_id):
             }
         )
 
+    # For each question in this lesson, get student progress
+    questions_data = []
+    for question in lesson.questions:
+        submissions = QuestionSubmission.query.filter_by(question_id=question.id).all()
+
+        # Count unique students and those who answered correctly
+        students_attempted = set()
+        students_completed = set()
+
+        for submission in submissions:
+            students_attempted.add(submission.user_id)
+            if submission.is_correct:
+                students_completed.add(submission.user_id)
+
+        questions_data.append(
+            {
+                "question": question,
+                "students_attempted": len(students_attempted),
+                "students_completed": len(students_completed),
+            }
+        )
+
     return render_template(
-        "tutor/lesson_detail.html", lesson=lesson, challenges_data=challenges_data
+        "tutor/lesson_detail.html",
+        lesson=lesson,
+        challenges_data=challenges_data,
+        questions_data=questions_data,
     )
 
 
@@ -231,20 +274,33 @@ def edit_lesson(lesson_id):
             if challenge and challenge.user_id == session["user_id"]:
                 lesson.challenges.append(challenge)
 
+        # Update questions
+        lesson.questions = []
+        question_ids = request.form.getlist("questions")
+        for question_id in question_ids:
+            question = Question.query.get(question_id)
+            if question and question.user_id == session["user_id"]:
+                lesson.questions.append(question)
+
         db.session.commit()
 
         flash("Lesson updated successfully!", "success")
         return redirect(url_for("tutor.lesson_detail", lesson_id=lesson.id))
 
-    # Get all challenges created by this tutor
+    # Get all challenges and questions created by this tutor
     all_challenges = Challenge.query.filter_by(user_id=session["user_id"]).all()
+    all_questions = Question.query.filter_by(user_id=session["user_id"]).all()
+
     selected_challenge_ids = [c.id for c in lesson.challenges]
+    selected_question_ids = [q.id for q in lesson.questions]
 
     return render_template(
         "tutor/edit_lesson.html",
         lesson=lesson,
         all_challenges=all_challenges,
         selected_challenge_ids=selected_challenge_ids,
+        all_questions=all_questions,
+        selected_question_ids=selected_question_ids,
     )
 
 
@@ -353,4 +409,218 @@ def assign_students():
 
     return render_template(
         "tutor/assign_students.html", groups=groups, students=students
+    )
+
+
+@tutor.route("/questions")
+def view_questions():
+    user = User.query.get(session["user_id"])
+    questions = Question.query.filter_by(user_id=session["user_id"]).all()
+
+    return render_template("tutor/questions.html", tutor=user, questions=questions)
+
+
+@tutor.route("/create_question", methods=["GET", "POST"])
+def create_question():
+    if request.method == "POST":
+        title = request.form.get("title")
+        text = request.form.get("text")
+
+        # Process options and correct answers
+        options = []
+        for i in range(int(request.form.get("option_count", 0))):
+            option_text = request.form.get(f"option_{i}")
+            is_correct = request.form.get(f"is_correct_{i}") == "on"
+
+            if option_text:  # Only add non-empty options
+                options.append({"text": option_text, "is_correct": is_correct})
+
+        new_question = Question(
+            title=title,
+            text=text,
+            options=options,
+            user_id=session["user_id"],
+        )
+
+        db.session.add(new_question)
+        db.session.commit()
+
+        flash("Question created successfully!", "success")
+        return redirect(url_for("tutor.view_questions"))
+
+    return render_template("tutor/create_question.html")
+
+
+@tutor.route("/edit_question/<int:question_id>", methods=["GET", "POST"])
+def edit_question(question_id):
+    question = Question.query.get_or_404(question_id)
+
+    # Ensure this question belongs to the current tutor
+    if question.user_id != session["user_id"]:
+        flash("You do not have permission to edit this question", "error")
+        return redirect(url_for("tutor.dashboard"))
+
+    if request.method == "POST":
+        question.title = request.form.get("title")
+        question.text = request.form.get("text")
+
+        # Process options and correct answers
+        options = []
+        for i in range(int(request.form.get("option_count", 0))):
+            option_text = request.form.get(f"option_{i}")
+            is_correct = request.form.get(f"is_correct_{i}") == "on"
+
+            if option_text:  # Only add non-empty options
+                options.append({"text": option_text, "is_correct": is_correct})
+
+        question.options = options
+
+        db.session.commit()
+
+        flash("Question updated successfully!", "success")
+        return redirect(url_for("tutor.view_questions"))
+
+    # Parse options from JSON for template
+    # options = json.loads(question.options)
+
+    return render_template("tutor/edit_question.html", question=question)
+
+
+@tutor.route("/question/<int:question_id>")
+def question_detail(question_id):
+    question = Question.query.get_or_404(question_id)
+
+    # Get total submissions count
+    total_submissions = QuestionSubmission.query.filter_by(
+        question_id=question_id
+    ).count()
+
+    # Get all correct submissions count
+    correct_submissions = QuestionSubmission.query.filter_by(
+        question_id=question_id, is_correct=True
+    ).count()
+
+    # Get students who attempted the question
+    students_attempted = (
+        db.session.query(QuestionSubmission.user_id)
+        .filter_by(question_id=question_id)
+        .distinct()
+        .count()
+    )
+
+    # Calculate first submission success rate
+    # Get first submission for each student
+    first_submissions_subquery = (
+        db.session.query(
+            QuestionSubmission.user_id,
+            db.func.min(QuestionSubmission.created_at).label("first_created_at"),
+        )
+        .filter_by(question_id=question_id)
+        .group_by(QuestionSubmission.user_id)
+        .subquery()
+    )
+
+    # Count students who got it correct on first try
+    students_passed_first_try = (
+        db.session.query(QuestionSubmission.user_id)
+        .join(
+            first_submissions_subquery,
+            db.and_(
+                QuestionSubmission.user_id == first_submissions_subquery.c.user_id,
+                QuestionSubmission.created_at
+                == first_submissions_subquery.c.first_created_at,
+            ),
+        )
+        .filter(
+            QuestionSubmission.question_id == question_id,
+            QuestionSubmission.is_correct == True,
+        )
+        .distinct()
+        .count()
+    )
+
+    # Get students who eventually passed (for comparison)
+    students_eventually_passed = (
+        db.session.query(QuestionSubmission.user_id)
+        .filter_by(question_id=question_id, is_correct=True)
+        .distinct()
+        .count()
+    )
+
+    # Get detailed student submission data
+    student_submissions = []
+    if total_submissions > 0:
+        # Get latest submission for each student
+        latest_subquery = (
+            db.session.query(
+                QuestionSubmission.user_id,
+                db.func.max(QuestionSubmission.created_at).label("latest_created_at"),
+            )
+            .filter_by(question_id=question_id)
+            .group_by(QuestionSubmission.user_id)
+            .subquery()
+        )
+
+        latest_submissions = (
+            db.session.query(QuestionSubmission, User)
+            .join(User, QuestionSubmission.user_id == User.id)
+            .join(
+                latest_subquery,
+                db.and_(
+                    QuestionSubmission.user_id == latest_subquery.c.user_id,
+                    QuestionSubmission.created_at
+                    == latest_subquery.c.latest_created_at,
+                ),
+            )
+            .filter(QuestionSubmission.question_id == question_id)
+            .all()
+        )
+
+        for submission, user in latest_submissions:
+            # Count total attempts for this student
+            attempt_count = QuestionSubmission.query.filter_by(
+                user_id=user.id, question_id=question_id
+            ).count()
+
+            # Check if student has ever passed
+            has_passed = (
+                QuestionSubmission.query.filter_by(
+                    user_id=user.id, question_id=question_id, is_correct=True
+                ).first()
+                is not None
+            )
+
+            # Check if student passed on first try
+            first_submission = (
+                QuestionSubmission.query.filter_by(
+                    user_id=user.id, question_id=question_id
+                )
+                .order_by(QuestionSubmission.created_at.asc())
+                .first()
+            )
+            passed_first_try = (
+                first_submission.is_correct if first_submission else False
+            )
+
+            student_submissions.append(
+                {
+                    "last_name": user.last_name,
+                    "attempt_count": attempt_count,
+                    "has_passed": has_passed,
+                    "passed_first_try": passed_first_try,
+                    "latest_submission": submission,
+                }
+            )
+
+    return render_template(
+        "tutor/question_detail.html",
+        question=question,
+        student_submissions=student_submissions,
+        stats={
+            "total_submissions": total_submissions,
+            "correct_submissions": correct_submissions,
+            "students_attempted": students_attempted,
+            "students_passed_first_try": students_passed_first_try,
+            "students_eventually_passed": students_eventually_passed,
+        },
     )
