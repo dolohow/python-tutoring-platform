@@ -12,9 +12,9 @@ RUN apt update && apt install -y --no-install-recommends \
  && apt purge -y --auto-remove \
  && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --system app && useradd --create-home --system --gid app app
+RUN groupadd --system --gid 1000 app && useradd --create-home --system -u 1000 --gid app app
 
-WORKDIR /home/app
+WORKDIR /usr/src/app
 USER app
 
 COPY --chown=app:app requirements.txt ./
