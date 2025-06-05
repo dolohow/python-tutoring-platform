@@ -45,6 +45,14 @@ def challenge_detail(challenge_id):
         lesson = l
         break  # Take the first lesson found
 
+    # check if student has access to this challenge
+    student = User.query.get(session["user_id"])
+    if not lesson or not lesson.visible:
+        # Check if lesson is enabled for student's group
+        if not student.group or lesson not in student.group.enabled_lessons:
+            flash("You do not have access to this challenge", "error")
+            return redirect(url_for("student.dashboard"))
+
     # Get navigation info for next/previous challenges within the lesson
     next_challenge = None
     previous_challenge = None
